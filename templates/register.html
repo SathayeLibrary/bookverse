@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - BookVerse</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: url('static/library.jpeg') no-repeat center center/cover;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(20px);
+            padding: 60px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            width: 450px;
+            animation: slideIn 1s ease-in-out;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 1);
+            animation: glow 2s infinite alternate;
+        }
+
+        input, .btn {
+            width: 100%;
+            padding: 18px;
+            margin: 12px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            transition: 0.5s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 75, 43, 0.6);
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            color: #FFD700;
+            text-decoration: none;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .back-link:hover {
+            text-shadow: 0 0 15px rgba(255, 215, 0, 1);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+            to { text-shadow: 0 0 25px rgba(255, 215, 0, 1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1> Register </h1>
+        <form id="registerForm">
+            <input type="text" name="fullname" placeholder="Full Name" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="btn">Register</button>
+        </form>
+        <a href="/" class="back-link">Back to Home</a>
+    </div>
+
+    <script>
+        document.getElementById("registerForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            var formData = {
+                fullname: document.querySelector('input[name="fullname"]').value,
+                email: document.querySelector('input[name="email"]').value,
+                password: document.querySelector('input[name="password"]').value
+            };
+
+            fetch("/register", {
+                method: "POST",
+                body: JSON.stringify(formData),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error("Error:", error));
+        });
+    </script>
+</body>
+</html>

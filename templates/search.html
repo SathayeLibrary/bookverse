@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Metadata Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: url('static/library.jpeg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .search-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            width: 90%;
+            max-width: 1100px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .input-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.123);
+            padding: 8px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .input-box input {
+            background: transparent;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            color: rgb(255, 255, 255);
+            font-size: 1.2rem;
+        }
+
+        .input-box input:focus {
+            outline: none;
+        }
+
+        .mic-btn {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #f39c12;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .search-btn {
+            background-color: #f39c12;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 50%;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+            border: none;
+        }
+
+        .search-btn:hover {
+            background-color: #e67e22;
+        }
+
+        #resultCount {
+            margin-top: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .results-container {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid white;
+            display: none; /* Initially hidden */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+        }
+
+        th, td {
+            padding: 8px;
+            border: 1px solid #fff;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f39c12;
+            position: sticky;
+            top: 0;
+        }
+
+        td a {
+            color: #f39c12;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        td a:hover {
+            color: #e67e22;
+        }
+    </style>
+    <script>
+        function startDictation(fieldId) {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Your browser does not support speech recognition. Please use Google Chrome.");
+                return;
+            }
+
+            let recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = "en-US";
+
+            recognition.onresult = function(event) {
+                document.getElementById(fieldId).value = event.results[0][0].transcript;
+            };
+
+            recognition.onspeechend = function() {
+                recognition.stop();
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                alert("Speech recognition error: " + event.error);
+            };
+
+            recognition.start();
+        }
+
+        function search() {
+            let searchBtn = document.querySelector(".search-btn");
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+            searchBtn.disabled = true;
+
+            let formData = new FormData(document.getElementById("searchForm"));
+
+            fetch("/search", { method: "POST", body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    let table = document.getElementById("resultsTableBody");
+                    let tableContainer = document.querySelector(".results-container");
+                    table.innerHTML = "";
+
+                    if (data.length === 0) {
+                        tableContainer.style.display = "none";
+                    } else {
+                        tableContainer.style.display = "block";
+
+                        let tableHead = document.getElementById("resultsTableHead");
+                        if (!tableHead) {
+                            let tableElement = document.querySelector("table");
+                            let thead = document.createElement("thead");
+                            thead.id = "resultsTableHead";
+                            thead.innerHTML = `
+                                <tr>
+                                    <th>AccNum</th><th>CardAuthor</th><th>Authors</th>
+                                    <th>CardTitle</th><th>SubTitle</th><th>AuthorMark</th>
+                                    <th>Subject</th><th>Department</th><th>Publisher</th>
+                                    <th>PublYear</th><th>Genre</th><th>Link</th>
+                                </tr>`;
+                            tableElement.prepend(thead);
+                        }
+
+                        data.forEach(item => {
+                            let linkCell = item.Link ? `<a href="${item.Link}" target="_blank">View</a>` : "N/A";
+                            table.innerHTML += `<tr>
+                                <td>${item.AccNum}</td>
+                                <td>${item.CardAuthor}</td>
+                                <td>${item.Authors}</td>
+                                <td>${item.CardTitle}</td>
+                                <td>${item.SubTitle}</td>
+                                <td>${item.AuthorMark}</td>
+                                <td>${item.Subject}</td>
+                                <td>${item.Department}</td>
+                                <td>${item.Publisher}</td>
+                                <td>${item.PublYear}</td>
+                                <td>${item.Genre}</td>
+                                <td>${linkCell}</td>
+                            </tr>`;
+                        });
+                    }
+
+                    document.getElementById("resultCount").innerHTML = `Results found: ${data.length}`;
+                    searchBtn.innerHTML = "Search";
+                    searchBtn.disabled = false;
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                    searchBtn.innerHTML = "Search";
+                    searchBtn.disabled = false;
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Library Metadata Search</h1>
+    <div class="search-container">
+        <form id="searchForm">
+            <div class="input-grid">
+                <div class="input-box"><input type="text" id="AccNum" name="AccNum" placeholder="AccNum"><button type="button" class="mic-btn" onclick="startDictation('AccNum')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="CardAuthor" name="CardAuthor" placeholder="Card Author"><button type="button" class="mic-btn" onclick="startDictation('CardAuthor')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="Authors" name="Authors" placeholder="Authors"><button type="button" class="mic-btn" onclick="startDictation('Authors')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="CardTitle" name="CardTitle" placeholder="Card Title"><button type="button" class="mic-btn" onclick="startDictation('CardTitle')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="subTitle" name="subTitle" placeholder="SubTitle"><button type="button" class="mic-btn" onclick="startDictation('subTitle')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="AuthorMark" name="AuthorMark" placeholder="Author Mark"><button type="button" class="mic-btn" onclick="startDictation('AuthorMark')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="Subject" name="Subject" placeholder="Subject"><button type="button" class="mic-btn" onclick="startDictation('Subject')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="Department" name="Department" placeholder="Department"><button type="button" class="mic-btn" onclick="startDictation('Department')"><i class="fas fa-microphone"></i></button></div>
+                <div class="input-box"><input type="text" id="Genre" name="Genre" placeholder="Genre"><button type="button" class="mic-btn" onclick="startDictation('Genre')"><i class="fas fa-microphone"></i></button></div>
+            </div>
+            <button type="button" onclick="search()" class="search-btn">Search</button>
+        </form>
+
+        <p id="resultCount">Results found: 0</p>
+
+        <div class="results-container">
+            <table>
+                <tbody id="resultsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

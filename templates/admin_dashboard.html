@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Book Search Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <!-- Chart.js -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: #333;
+            color: white;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+        }
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+        }
+        .sidebar ul li:hover, .sidebar ul li.active {
+            background: #FFD700;
+            color: black;
+            font-weight: bold;
+        }
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .header {
+            background: #333;
+            color: white;
+            padding: 15px;
+            text-align: right;
+        }
+        .header button {
+            background: #ff5722;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        .header button:hover {
+            background: #e64a19;
+        }
+        .dashboard-content {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: white;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .stat-box {
+            background: #ff9800;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 200px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .chart-container {
+            width: 80%;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li onclick="showSection('dashboard', this)" class="active"><a>Dashboard</a></li>
+            <li onclick="showSection('users', this)"><a>Users</a></li>
+            <li onclick="showSection('books', this)"><a>Books</a></li>
+            <li onclick="showSection('statistics', this)"><a>Statistics</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <button id="logoutBtn">Logout</button>
+            
+        </div>
+
+        <div id="dashboard" class="dashboard-content">
+            <h1>Welcome, Admin!</h1>
+            <div class="dashboard-intro">
+                
+                <p>The Admin Dashboard for the <strong>Book Search Engine</strong> provides a powerful and user-friendly interface for managing users, books, and library statistics.</p>
+                
+                <ul>
+                    <li>🔹 <strong>Manage Users</strong> – View and oversee registered users effortlessly.</li>
+                    <li>🔹 <strong>Manage Books</strong> – Access detailed book records, including titles, authors, publishers, and more.</li>
+                    <li>🔹 <strong>Track Statistics</strong> – Get real-time insights into book availability and user engagement with interactive charts.</li>
+                    <li>🔹 <strong>Seamless Navigation</strong> – Easily switch between sections using the sidebar for a smooth experience.</li>
+                    <li>🔹 <strong>Secure Logout</strong> – Ensure data security with a simple logout option.</li>
+                </ul>
+            
+                <p>📚 <strong>Efficient Library Management Starts Here!</strong> 🚀</p>
+            </div>
+            
+        </div>
+
+        <div id="users" class="dashboard-content hidden">
+            <h2>Users Sheet</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+            </table>
+        </div>
+
+        <div id="books" class="dashboard-content hidden">
+            <h2>Books Sheet</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>AccNum</th>
+                        <th>CardAuthor</th>
+                        <th>Authors</th>
+                        <th>CardTitle</th>
+                        <th>subTitle</th>
+                        <th>AuthorMark</th>
+                        <th>Subject</th>
+                        <th>Department</th>
+                        <th>Publisher</th>
+                        <th>PublYear</th>
+                        <th>Gener</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody id="booksTable"></tbody>
+            </table>
+        </div>
+
+        <div id="statistics" class="dashboard-content hidden">
+            <h2>📊 Statistics Overview</h2>
+            <div class="stats-container">
+                <div class="stat-box">📚 Total Books: <span id="totalBooks">0</span></div>
+                <div class="stat-box">👥 Total Users: <span id="totalUsers">0</span></div>
+            </div>
+            <h2>📊 Books Count by Subject</h2>
+            <div class="chart-container">
+                <canvas id="bookChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let bookChart;
+
+        function showSection(sectionId, element) {
+            document.querySelectorAll('.dashboard-content').forEach(div => div.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            document.querySelectorAll(".sidebar ul li").forEach(item => item.classList.remove("active"));
+            if (element) {
+                element.classList.add("active");
+            }
+
+            if (sectionId === 'statistics') {
+                fetchBookStatistics();
+            }
+        }
+
+        function fetchBookStatistics() {
+    fetch('/get_book_statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error("📌 Error fetching book statistics:", data.error);
+                return;
+            }
+
+            console.log("📌 Debug - Book Statistics Data:", data);  // Log response
+
+            // Convert book counts into an array of {subject, count}
+            let bookData = Object.entries(data.book_counts).map(([subject, count]) => ({ subject, count }));
+
+            // Sort by highest count and take top 20
+            bookData.sort((a, b) => b.count - a.count);
+            bookData = bookData.slice(0, 20); 
+
+            // Extract labels and counts
+            const subjects = bookData.map(item => item.subject);
+            const counts = bookData.map(item => item.count);
+
+            if (!subjects.length) {
+                console.warn("📌 No data received for book subjects.");
+                return;
+            }
+
+            // Destroy previous chart instance if exists
+            if (bookChart) {
+                bookChart.destroy();
+            }
+
+            const ctx = document.getElementById('bookChart').getContext('2d');
+            bookChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [{
+                        label: 'Top 20 Subjects by Book Count',
+                        data: counts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error("📌 Error fetching book data:", error));
+}
+
+
+
+
+        function fetchUsers() {
+            fetch('/get_users')
+                .then(response => response.json())
+                .then(data => {
+                    let tableBody = document.getElementById("usersTable");
+                    tableBody.innerHTML = "";
+                    data.forEach(user => {
+                        let row = `<tr><td>${user.fullname}</td><td>${user.email}</td></tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                    document.getElementById("totalUsers").textContent = data.length;
+                })
+                .catch(error => console.error("📌 Error loading users:", error));
+        }
+
+        function fetchBooks() {
+            fetch('/get_books')
+                .then(response => response.json())
+                .then(data => {
+                    let tableBody = document.getElementById("booksTable");
+                    tableBody.innerHTML = "";
+                    document.getElementById("totalBooks").textContent = data.total_books;
+
+                    data.books.forEach(book => {
+                        let row = `
+                            <tr>
+                                <td>${book.AccNum || 'N/A'}</td>
+                                <td>${book.CardAuthor || 'N/A'}</td>
+                                <td>${book.Authors || 'N/A'}</td>
+                                <td>${book.CardTitle || 'N/A'}</td>
+                                <td>${book.subTitle || 'N/A'}</td>
+                                <td>${book.AuthorMark || 'N/A'}</td>
+                                <td>${book.Subject || 'N/A'}</td>
+                                <td>${book.Department || 'N/A'}</td>
+                                <td>${book.Publisher || 'N/A'}</td>
+                                <td>${book.PublYear || 'N/A'}</td>
+                                <td>${book.Gener || 'N/A'}</td>
+                                <td><a href="${book.Link || '#'}" target="_blank">PDF</a></td>
+                            </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => console.error("📌 Error loading books:", error));
+        }
+        
+        document.getElementById("logoutBtn").addEventListener("click", function () {
+            fetch("/logout", { method: "POST" }) // Sends logout request
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = "/"; 
+                    } else {
+                        console.error("📌 Logout failed!");
+                    }
+                })
+                .catch(error => console.error("📌 Error during logout:", error));
+        });
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            fetchUsers();
+            fetchBooks();
+        });
+    </script>
+
+</body>
+</html>
