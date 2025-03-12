@@ -135,32 +135,35 @@ def register():
 def login():
     try:
         data = request.get_json()
-        email = data.get("email")
-        password = data.get("password")
+        email = data.get("email").strip().lower()
+        password = data.get("password").strip()
 
         if not email or not password:
             return jsonify({"error": "Email and password are required"}), 400
 
         print(f"📌 Debug - Email: {email}, Password: {password}")
 
-        # Fetch all records from Google Sheets
+        # ✅ Fetch all records
         records = user_sheet.get_all_records()
         print(f"📌 Debug - Records: {records}")
 
         if not records:
             return jsonify({"error": "No records found in database"}), 500
 
-        # Check credentials
+        # ✅ Case-insensitive match
         for record in records:
-            if record.get("Email") == email and record.get("Password") == password:
+            if record.get("Email").strip().lower() == email and record.get("Password").strip() == password:
                 session['user'] = email
+                print("✅ Login successful!")
                 return jsonify({"message": "Login successful!"}), 200
 
+        print("❌ Invalid email or password")
         return jsonify({"error": "Invalid email or password"}), 401
 
     except Exception as e:
         print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 
 # =====================================
