@@ -126,7 +126,8 @@
         fetch("/login", {
             method: "POST",
             body: JSON.stringify(formData),
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json",
+                     "Accept": "application/json"},
             credentials: 'include' // ✅ Allow session cookies
         })
         .then(response => {
