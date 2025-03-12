@@ -133,18 +133,35 @@ def register():
 # 👉 User Login
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    email = data.get("Email")
-    password = data.get("Password")
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
 
-    records = user_sheet.get_all_records()
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
 
-    for record in records:
-        if record.get("Email") == email and record.get("Password") == password:
-            session['user'] = email
-            return jsonify({"message": "Login successful!"}), 200
+        print(f"📌 Debug - Email: {email}, Password: {password}")
 
-    return jsonify({"error": "Invalid email or password"}), 401
+        # Fetch all records from Google Sheets
+        records = user_sheet.get_all_records()
+        print(f"📌 Debug - Records: {records}")
+
+        if not records:
+            return jsonify({"error": "No records found in database"}), 500
+
+        # Check credentials
+        for record in records:
+            if record.get("Email") == email and record.get("Password") == password:
+                session['user'] = email
+                return jsonify({"message": "Login successful!"}), 200
+
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 # =====================================
 # ✅ Book Management
