@@ -134,8 +134,8 @@ def register():
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
+    email = data.get("Email")
+    password = data.get("Password")
 
     records = user_sheet.get_all_records()
 
