@@ -136,7 +136,7 @@ def login():
     try:
         data = request.get_json()
         email = data.get("email").strip().lower()
-        password = data.get("password")
+        password = data.get("password").strip()
 
         if not email or not password:
             return jsonify({"error": "Email and password are required"}), 400
