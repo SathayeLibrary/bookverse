@@ -5,46 +5,50 @@ import gspread
 from google.oauth2.service_account import Credentials
 from collections import defaultdict
 
-# Initialize Flask app
+# =====================================
+# ✅ Flask App Configuration
+# =====================================
 app = Flask(__name__, template_folder="templates")
 
-# ===============================
-# ✅ Environment Configuration
-# ===============================
+# Load Flask secret key from environment variable
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
 
-# Load environment variables
+# =====================================
+# ✅ Load Google Sheets Credentials
+# =====================================
 SERVICE_ACCOUNT_KEY = os.getenv('GOOGLE_CREDENTIALS')
 if not SERVICE_ACCOUNT_KEY:
-    raise ValueError("Missing GOOGLE_CREDENTIALS environment variable")
+    raise ValueError("GOOGLE_CREDENTIALS environment variable is missing.")
 
-# Load Google service account credentials
+# Load JSON key from environment
 service_account_info = json.loads(SERVICE_ACCOUNT_KEY)
+
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets"
 ]
+
 creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
 client = gspread.authorize(creds)
 
 # Open Google Sheets
-USER_SHEET_NAME = os.getenv('USER_SHEET_NAME', 'BookverseUsers')  # For user data
-METADATA_SHEET_NAME = os.getenv('METADATA_SHEET_NAME', 'Metadata')  # For book data
+USER_SHEET_NAME = os.getenv('USER_SHEET_NAME', 'BookverseUsers')
+METADATA_SHEET_NAME = os.getenv('METADATA_SHEET_NAME', 'Metadata')
 
 # Open sheets
 user_sheet = client.open(USER_SHEET_NAME).sheet1
 metadata_sheet = client.open(METADATA_SHEET_NAME).sheet1
 
-# Set Flask secret key for session management
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
-
-# Admin credentials (from environment variables)
+# =====================================
+# ✅ Admin Credentials from Environment
+# =====================================
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@example.com')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
-# ===============================
+# =====================================
 # ✅ Routes
-# ===============================
+# =====================================
 
 # 👉 Home Page
 @app.route('/')
@@ -56,7 +60,7 @@ def home():
 def admin_login_page():
     return render_template("admin_login.html")
 
-# 👉 Logout (Clear Session)
+# 👉 Logout
 @app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
@@ -97,11 +101,11 @@ def register_page():
 def search_page():
     return render_template("search.html")
 
-# ===============================
+# =====================================
 # ✅ User Management
-# ===============================
+# =====================================
 
-# 👉 Get All Users
+# 👉 Get Users
 @app.route('/get_users')
 def get_users():
     try:
@@ -111,19 +115,20 @@ def get_users():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 👉 Register New User
+# 👉 Register User
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     fullname = data.get("fullname")
     email = data.get("email")
     password = data.get("password")
-    
+
     if not fullname or not email or not password:
         return jsonify({"message": "All fields are required!"}), 400
-    
+
+    # Add to Google Sheets
     user_sheet.append_row([fullname, email, password])
-    return jsonify({"message": "Registration successful!"})
+    return jsonify({"message": "Registration successful!"}), 201
 
 # 👉 User Login
 @app.route("/login", methods=["POST"])
@@ -132,27 +137,18 @@ def login():
     email = data.get("email")
     password = data.get("password")
 
-    #print(f"📌 Debug - Received login attempt: Email: {email}, Password: {password}")  
+    records = user_sheet.get_all_records()
 
-    # Fetch all records from Google Sheets
-    records = sheet.get_all_records()
-    #print("📌 Debug - Google Sheets Records:", records)  # Debugging output
-
-    if not records:
-        return jsonify({"error": "No records found in database"}), 500
-
-    # Check user credentials
     for record in records:
-        #print(f"📌 Debug - Checking record: {record}")  # Debugging output
-        if str(record.get("Email")).strip() == str(email).strip() and str(record.get("Password")).strip() == str(password).strip():
+        if record.get("Email") == email and record.get("Password") == password:
+            session['user'] = email
             return jsonify({"message": "Login successful!"}), 200
 
     return jsonify({"error": "Invalid email or password"}), 401
 
-
-# ===============================
+# =====================================
 # ✅ Book Management
-# ===============================
+# =====================================
 
 # 👉 Get Book Statistics
 @app.route('/get_book_statistics')
@@ -169,31 +165,18 @@ def get_book_statistics():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 👉 Get Books
+# 👉 Get Books (Limit to 50)
 @app.route('/get_books')
 def get_books():
     try:
         records = metadata_sheet.get_all_records()
         total_books = len(records)
-        records = records[:50]  # Limit response to 50 records
 
-        books = [
-            {
-                "AccNum": record.get("AccNum", "N/A"),
-                "CardAuthor": record.get("CardAuthor", "N/A"),
-                "Authors": record.get("Authors", "N/A"),
-                "CardTitle": record.get("CardTitle", "N/A"),
-                "subTitle": record.get("subTitle", "N/A"),
-                "AuthorMark": record.get("AuthorMark", "N/A"),
-                "Subject": record.get("Subject", "N/A"),
-                "Department": record.get("Department", "N/A"),
-                "Publisher": record.get("Publisher", "N/A"),
-                "PublYear": record.get("PublYear", "N/A"),
-                "Gener": record.get("Gener", "N/A"),
-                "Link": record.get("Link", "#")
-            }
-            for record in records
-        ]
+        if not records:
+            return jsonify({"error": "No books found"}), 404
+
+        # Limit response to 50 records
+        books = records[:50]
 
         return jsonify({"total_books": total_books, "books": books})
     except Exception as e:
@@ -212,9 +195,8 @@ def search():
 
     return jsonify(filtered_results)
 
-# ===============================
+# =====================================
 # ✅ Start Flask App
-# ===============================
-
+# =====================================
 if __name__ == '__main__':
     app.run(debug=True)
